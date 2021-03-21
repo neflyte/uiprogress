@@ -7,8 +7,8 @@ import (
 )
 
 func main() {
-	uiprogress.Start()            // start rendering
-	bar := uiprogress.AddBar(100) // Add a new bar
+	uiprogress.Start()                            // start rendering
+	bar := uiprogress.AddBar(100).NoProgressBar() // Add a new bar
 
 	// optionally, append and prepend completion and elapsed time
 	bar.AppendCompleted()

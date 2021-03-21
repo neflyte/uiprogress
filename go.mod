@@ -1,4 +1,4 @@
-module github.com/gosuri/uiprogress
+module github.com/neflyte/uiprogress
 
 go 1.15
 

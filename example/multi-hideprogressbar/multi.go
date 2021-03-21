@@ -1,10 +1,9 @@
 package main
 
 import (
+	"github.com/neflyte/uiprogress"
 	"sync"
 	"time"
-
-	"github.com/neflyte/uiprogress"
 )
 
 func main() {
@@ -13,7 +12,7 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	bar1 := uiprogress.AddBar(20).AppendCompleted().PrependElapsed()
+	bar1 := uiprogress.AddBar(20).AppendCompleted().PrependElapsed().NoProgressBar()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -22,7 +21,7 @@ func main() {
 		}
 	}()
 
-	bar2 := uiprogress.AddBar(40).AppendCompleted().PrependElapsed()
+	bar2 := uiprogress.AddBar(40).AppendCompleted().PrependElapsed().NoProgressBar()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -32,7 +31,7 @@ func main() {
 	}()
 
 	time.Sleep(time.Second)
-	bar3 := uiprogress.AddBar(20).PrependElapsed().AppendCompleted()
+	bar3 := uiprogress.AddBar(20).AppendCompleted().PrependElapsed().NoProgressBar()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()

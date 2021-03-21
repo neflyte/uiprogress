@@ -7,7 +7,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gosuri/uiprogress/util/strutil"
+	"github.com/neflyte/uiprogress/util/strutil"
+)
+
+const (
+	oneHundredPercent = 100.00 // OneHundredPercent represents the float value of 100%
 )
 
 var (
@@ -35,38 +39,24 @@ var (
 
 // Bar represents a progress bar
 type Bar struct {
-	// Total of the total  for the progress bar
-	Total int
-
-	// LeftEnd is character in the left most part of the progress indicator. Defaults to '['
-	LeftEnd byte
-
-	// RightEnd is character in the right most part of the progress indicator. Defaults to ']'
-	RightEnd byte
-
-	// Fill is the character representing completed progress. Defaults to '='
-	Fill byte
-
-	// Head is the character that moves when progress is updated.  Defaults to '>'
-	Head byte
-
-	// Empty is the character that represents the empty progress. Default is '-'
-	Empty byte
-
-	// TimeStated is time progress began
-	TimeStarted time.Time
-
-	// Width is the width of the progress bar
-	Width int
-
-	// timeElased is the time elapsed for the progress
-	timeElapsed time.Duration
-	current     int
-
-	mtx *sync.RWMutex
+	TimeStarted time.Time // TimeStarted is time progress began
 
 	appendFuncs  []DecoratorFunc
 	prependFuncs []DecoratorFunc
+
+	Total int // Total of the total for the progress bar
+	Width int // Width is the width of the progress bar
+
+	timeElapsed time.Duration // timeElapsed is the time elapsed for the progress
+	current     int
+	mtx         *sync.RWMutex
+
+	LeftEnd         byte // LeftEnd is character in the left most part of the progress indicator. Defaults to '['
+	RightEnd        byte // RightEnd is character in the right most part of the progress indicator. Defaults to ']'
+	Fill            byte // Fill is the character representing completed progress. Defaults to '='
+	Head            byte // Head is the character that moves when progress is updated.  Defaults to '>'
+	Empty           byte // Empty is the character that represents the empty progress. Default is '-'
+	HideProgressBar bool // HideProgressBar is a flag that indicates the progress bar is not to be rendered
 }
 
 // DecoratorFunc is a function that can be prepended and appended to the progress bar
@@ -75,13 +65,14 @@ type DecoratorFunc func(b *Bar) string
 // NewBar returns a new progress bar
 func NewBar(total int) *Bar {
 	return &Bar{
-		Total:    total,
-		Width:    Width,
-		LeftEnd:  LeftEnd,
-		RightEnd: RightEnd,
-		Head:     Head,
-		Fill:     Fill,
-		Empty:    Empty,
+		Total:           total,
+		Width:           Width,
+		LeftEnd:         LeftEnd,
+		RightEnd:        RightEnd,
+		Head:            Head,
+		Fill:            Fill,
+		Empty:           Empty,
+		HideProgressBar: false,
 
 		mtx: &sync.RWMutex{},
 	}
@@ -156,7 +147,7 @@ func (b *Bar) PrependFunc(f DecoratorFunc) *Bar {
 	return b
 }
 
-// PrependCompleted prepends the precent completed to the progress bar
+// PrependCompleted prepends the percent completed to the progress bar
 func (b *Bar) PrependCompleted() *Bar {
 	b.PrependFunc(func(b *Bar) string {
 		return b.CompletedPercentString()
@@ -164,7 +155,7 @@ func (b *Bar) PrependCompleted() *Bar {
 	return b
 }
 
-// PrependElapsed prepends the time elapsed to the begining of the bar
+// PrependElapsed prepends the time elapsed to the beginning of the bar
 func (b *Bar) PrependElapsed() *Bar {
 	b.PrependFunc(func(b *Bar) string {
 		return strutil.PadLeft(b.TimeElapsedString(), 5, ' ')
@@ -174,25 +165,28 @@ func (b *Bar) PrependElapsed() *Bar {
 
 // Bytes returns the byte presentation of the progress bar
 func (b *Bar) Bytes() []byte {
-	completedWidth := int(float64(b.Width) * (b.CompletedPercent() / 100.00))
+	pb := make([]byte, 0)
+	if !b.HideProgressBar {
+		completedWidth := int(float64(b.Width) * (b.CompletedPercent() / oneHundredPercent))
 
-	// add fill and empty bits
-	var buf bytes.Buffer
-	for i := 0; i < completedWidth; i++ {
-		buf.WriteByte(b.Fill)
-	}
-	for i := 0; i < b.Width-completedWidth; i++ {
-		buf.WriteByte(b.Empty)
-	}
+		// add fill and empty bits
+		var buf bytes.Buffer
+		for i := 0; i < completedWidth; i++ {
+			buf.WriteByte(b.Fill)
+		}
+		for i := 0; i < b.Width-completedWidth; i++ {
+			buf.WriteByte(b.Empty)
+		}
 
-	// set head bit
-	pb := buf.Bytes()
-	if completedWidth > 0 && completedWidth < b.Width {
-		pb[completedWidth-1] = b.Head
-	}
+		// set head bit
+		pb = buf.Bytes()
+		if completedWidth > 0 && completedWidth < b.Width {
+			pb[completedWidth-1] = b.Head
+		}
 
-	// set left and right ends bits
-	pb[0], pb[len(pb)-1] = b.LeftEnd, b.RightEnd
+		// set left and right ends bits
+		pb[0], pb[len(pb)-1] = b.LeftEnd, b.RightEnd
+	}
 
 	// render append functions to the right of the bar
 	for _, f := range b.appendFuncs {
@@ -216,7 +210,7 @@ func (b *Bar) String() string {
 
 // CompletedPercent return the percent completed
 func (b *Bar) CompletedPercent() float64 {
-	return (float64(b.Current()) / float64(b.Total)) * 100.00
+	return (float64(b.Current()) / float64(b.Total)) * oneHundredPercent
 }
 
 // CompletedPercentString returns the formatted string representation of the completed percent
@@ -231,7 +225,13 @@ func (b *Bar) TimeElapsed() time.Duration {
 	return b.timeElapsed
 }
 
-// TimeElapsedString returns the formatted string represenation of the time elapsed
+// TimeElapsedString returns the formatted string representation of the time elapsed
 func (b *Bar) TimeElapsedString() string {
 	return strutil.PrettyTime(b.TimeElapsed())
+}
+
+// NoProgressBar sets the HideProgressBar flag to true
+func (b *Bar) NoProgressBar() *Bar {
+	b.HideProgressBar = true
+	return b
 }
